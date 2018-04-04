@@ -692,8 +692,15 @@ class UnitOfWork implements PropertyChangedListener
 
                 $orgValue = $originalData[$propName];
 
+                $event = new Event\OnComparisonEventArgs($this->em, $entity, $propName, $orgValue, $actualValue);
+                if ($this->evm->hasListeners(Events::onComparison)) {
+                    $this->evm->dispatchEvent(Events::onComparison, $event);
+                }
+
                 // skip if value haven't changed
-                if ($orgValue === $actualValue) {
+                if (0 === $event->getComparisonResult() ||
+                    (null === $event->getComparisonResult() && $orgValue === $actualValue)
+                ) {
                     continue;
                 }
 
@@ -1021,9 +1028,19 @@ class UnitOfWork implements PropertyChangedListener
         foreach ($actualData as $propName => $actualValue) {
             $orgValue = $originalData[$propName] ?? null;
 
-            if ($orgValue !== $actualValue) {
-                $changeSet[$propName] = [$orgValue, $actualValue];
+            $event = new Event\OnComparisonEventArgs($this->em, $entity, $propName, $orgValue, $actualValue);
+            if ($this->evm->hasListeners(Events::onComparison)) {
+                $this->evm->dispatchEvent(Events::onComparison, $event);
             }
+
+            // skip if value haven't changed
+            if (0 === $event->getComparisonResult() ||
+                (null === $event->getComparisonResult() && $orgValue === $actualValue)
+            ) {
+                continue;
+            }
+
+            $changeSet[$propName] = [$orgValue, $actualValue];
         }
 
         if ($changeSet) {
