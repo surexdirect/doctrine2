@@ -164,4 +164,10 @@ final class Events
      * @var string
      */
     const onClear = 'onClear';
+
+    /**
+     * The onComparison event occurs when the UnitOfWork#computeChangeSet or UnitOfWork#recomputeSingleEntityChangeSet
+     * operations are invoked.
+     */
+    const onComparison = 'onComparison';
 }
