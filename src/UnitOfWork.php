@@ -50,7 +50,6 @@ use Exception;
 use InvalidArgumentException;
 use RuntimeException;
 use UnexpectedValueException;
-
 use function array_chunk;
 use function array_combine;
 use function array_diff_key;
@@ -786,8 +785,16 @@ class UnitOfWork implements PropertyChangedListener
                     }
                 }
 
+                $event = new Event\OnComparisonEventArgs($this->em, $entity, $propName, $orgValue, $actualValue);
+                if ($this->evm->hasListeners(Events::onComparison)) {
+                    $this->evm->dispatchEvent(Events::onComparison, $event);
+                }
+
                 // skip if value haven't changed
-                if ($orgValue === $actualValue) {
+                if (
+                    $event->getComparisonResult() === 0 ||
+                    ($event->getComparisonResult() === null && $orgValue === $actualValue)
+                ) {
                     continue;
                 }
 
@@ -1148,9 +1155,20 @@ class UnitOfWork implements PropertyChangedListener
                 }
             }
 
-            if ($orgValue !== $actualValue) {
-                $changeSet[$propName] = [$orgValue, $actualValue];
+            $event = new Event\OnComparisonEventArgs($this->em, $entity, $propName, $orgValue, $actualValue);
+            if ($this->evm->hasListeners(Events::onComparison)) {
+                $this->evm->dispatchEvent(Events::onComparison, $event);
             }
+
+            // skip if value haven't changed
+            if (
+                $event->getComparisonResult() === 0 ||
+                ($event->getComparisonResult() === null && $orgValue === $actualValue)
+            ) {
+                continue;
+            }
+
+            $changeSet[$propName] = [$orgValue, $actualValue];
         }
 
         if ($changeSet) {
